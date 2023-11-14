@@ -81,9 +81,9 @@ double time_diff_lidar_to_imu = 0.0;
 mutex mtx_buffer;
 condition_variable sig_buffer;
 
+int localization_mode;
 string root_dir = ROOT_DIR;
 string map_file_path, lid_topic, imu_topic;
-
 double res_mean_last = 0.05, total_residual = 0.0;
 double last_timestamp_lidar = 0, last_timestamp_imu = -1.0;
 double gyr_cov = 0.1, acc_cov = 0.1, b_gyr_cov = 0.0001, b_acc_cov = 0.0001;
@@ -112,6 +112,7 @@ PointCloudXYZI::Ptr normvec(new PointCloudXYZI(100000, 1));
 PointCloudXYZI::Ptr laserCloudOri(new PointCloudXYZI(100000, 1));
 PointCloudXYZI::Ptr corr_normvect(new PointCloudXYZI(100000, 1));
 PointCloudXYZI::Ptr _featsArray;
+PointCloudXYZI::Ptr global_map(new PointCloudXYZI());
 
 pcl::VoxelGrid<PointType> downSizeFilterSurf;
 pcl::VoxelGrid<PointType> downSizeFilterMap;
@@ -754,6 +755,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     nh.param<bool>("publish/path_en",path_en, true);
+    nh.param<int>("common/localization_mode", localization_mode, 1);
     nh.param<bool>("publish/scan_publish_en",scan_pub_en, true);
     nh.param<bool>("publish/dense_publish_en",dense_pub_en, true);
     nh.param<bool>("publish/scan_bodyframe_pub_en",scan_body_pub_en, true);
@@ -851,10 +853,24 @@ int main(int argc, char** argv)
             ("/Odometry", 100000);
     ros::Publisher pubPath          = nh.advertise<nav_msgs::Path> 
             ("/path", 100000);
+    ros::Publisher pubGlobalMap     = nh.advertise<sensor_msgs::PointCloud2>
+            ("/global_map", 1);
 //------------------------------------------------------------------------------------------------------
     signal(SIGINT, SigHandle);
     ros::Rate rate(5000);
     bool status = ros::ok();
+
+    // load global map
+    ros::Duration(1).sleep();
+    string global_map_name = root_dir + "map/map.pcd";
+    pcl::io::loadPCDFile(global_map_name, *global_map);
+    sensor_msgs::PointCloud2 global_map_msg;
+    pcl::toROSMsg(*global_map, global_map_msg);
+    global_map_msg.header.frame_id = "camera_init";
+    pubGlobalMap.publish(global_map_msg);
+    ROS_INFO("Load global map successfully!");
+
+
     while (status)
     {
         if (flg_exit) break;
@@ -901,16 +917,22 @@ int main(int argc, char** argv)
             /*** initialize the map kdtree ***/
             if(ikdtree.Root_Node == nullptr)
             {
-                if(feats_down_size > 5)
+                if (localization_mode == 1)
                 {
-                    ikdtree.set_downsample_param(filter_size_map_min);
-                    feats_down_world->resize(feats_down_size);
-                    for(int i = 0; i < feats_down_size; i++)
-                    {
-                        pointBodyToWorld(&(feats_down_body->points[i]), &(feats_down_world->points[i]));
-                    }
-                    ikdtree.Build(feats_down_world->points);
+                    ikdtree.Build(global_map->points);
                 }
+
+//                if(feats_down_size > 5)
+//                {
+//
+//                    ikdtree.set_downsample_param(filter_size_map_min);
+//                    feats_down_world->resize(feats_down_size);
+//                    for(int i = 0; i < feats_down_size; i++)
+//                    {
+//                        pointBodyToWorld(&(feats_down_body->points[i]), &(feats_down_world->points[i]));
+//                    }
+//                    ikdtree.Build(feats_down_world->points);
+//                }
                 continue;
             }
             int featsFromMapNum = ikdtree.validnum();

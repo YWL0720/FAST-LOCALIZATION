@@ -4,7 +4,7 @@ common:
     time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
     time_offset_lidar_to_imu: 0.0 # Time offset between lidar and IMU calibrated by other algorithms, e.g. LI-Init (can be found in README).
                                   # This param will take effect no matter what time_sync_en is. So if the time offset is not known exactly, please set as 0.0
-
+    localization_mode: 1          # 1 for given init pose, 2 for dynamic init
 preprocess:
     lidar_type: 1                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 
     scan_line: 4
