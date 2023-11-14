@@ -59,6 +59,8 @@
 #include <livox_ros_driver/CustomMsg.h>
 #include "preprocess.h"
 #include <ikd-Tree/ikd_Tree.h>
+#include <chrono>
+
 
 #define INIT_TIME           (0.1)
 #define LASER_POINT_COV     (0.001)
@@ -877,6 +879,7 @@ int main(int argc, char** argv)
         ros::spinOnce();
         if(sync_packages(Measures)) 
         {
+            std::chrono::steady_clock::time_point t_begin = std::chrono::steady_clock::now();
             if (flg_first_scan)
             {
                 first_lidar_time = Measures.lidar_beg_time;
@@ -907,7 +910,7 @@ int main(int argc, char** argv)
             flg_EKF_inited = (Measures.lidar_beg_time - first_lidar_time) < INIT_TIME ? \
                             false : true;
             /*** Segment the map in lidar FOV ***/
-            lasermap_fov_segment();
+//            lasermap_fov_segment();
 
             /*** downsample the feature points in a scan ***/
             downSizeFilterSurf.setInputCloud(feats_undistort);
@@ -988,7 +991,7 @@ int main(int argc, char** argv)
 
             /*** add the feature points to map kdtree ***/
             t3 = omp_get_wtime();
-            map_incremental();
+//            map_incremental();
             t5 = omp_get_wtime();
             
             /******* Publish points *******/
@@ -997,7 +1000,13 @@ int main(int argc, char** argv)
             if (scan_pub_en && scan_body_pub_en) publish_frame_body(pubLaserCloudFull_body);
             // publish_effect_world(pubLaserCloudEffect);
             // publish_map(pubLaserCloudMap);
-
+            static double total_time = 0;
+            static int time_count = 1;
+            std::chrono::steady_clock::time_point t_end = std::chrono::steady_clock::now();
+            double time_cost = std::chrono::duration_cast<std::chrono::duration<double> >(t_end - t_begin).count();
+            total_time += time_cost;
+            cout << "time cost = " << total_time * 1000.0 / time_count << " ms"<< endl;
+            time_count++;
             /*** Debug variables ***/
             if (runtime_pos_log)
             {
