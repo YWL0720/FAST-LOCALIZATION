@@ -58,6 +58,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL 1.8 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 message(Eigen: ${EIGEN3_INCLUDE_DIR})
 
@@ -66,6 +67,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${PCL_INCLUDE_DIRS}
   ${PYTHON_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
   include)
 
 add_message_files(
@@ -84,6 +86,6 @@ catkin_package(
   INCLUDE_DIRS
 )
 
-add_executable(fast_localization src/laserMapping.cpp include/ikd-Tree/ikd_Tree.cpp src/preprocess.cpp)
+add_executable(fast_localization src/laserMapping.cpp include/ikd-Tree/ikd_Tree.cpp src/preprocess.cpp include/Scancontext/Scancontext.cpp)
 target_link_libraries(fast_localization ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
-target_include_directories(fast_localization PRIVATE ${PYTHON_INCLUDE_DIRS})
+target_include_directories(fast_localization PRIVATE ${PYTHON_INCLUDE_DIRS} ${OpenCV_LIBRARIES})
