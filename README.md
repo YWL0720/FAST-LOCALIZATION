@@ -1,14 +1,14 @@
 # FAST-LOCALIZATION
 **A LiDAR-Inertial localization package based on [FAST-LIO2](https://github.com/hku-mars/FAST_LIO), operating with a known prior map.**
 <p align="center">
-  <img src="doc/test.gif" height="500"/>
+  <img src="doc/test.gif" height="400"/>
   <br>
   <em>Fig 1 :Indoor test without manual input of the initial pose</em>
 </p>
 
 <p align="center">
-  <img src="doc/init.gif" height="250"/>
-<img src="doc/detail.gif" height="250"/>
+  <img src="doc/init.gif" height="200"/>
+<img src="doc/detail.gif" height="200"/>
   <br>
   <em>Fig 2 :Initial pose given by ScanContext(left)  and Localization detail(right)</em>
 </p>
