@@ -774,6 +774,34 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     solve_time += omp_get_wtime() - solve_start_;
 }
 
+void load_file(ros::Publisher& global_map_pub)
+{
+    fstream pose_file;
+    pose_file.open(root_dir + "map/pose.json");
+    double tx, ty, tz, w, x, y, z;
+    int count = 0;
+    while(pose_file >> tx >> ty >> tz >> w >> x >> y >> z)
+    {
+        Eigen::Quaterniond q(w, x, y, z);
+        Eigen::Vector3d p(tx, ty, tz);
+        position_map.push_back(p);
+        pose_map.push_back(q);
+        pcl::PointCloud<pcl::PointXYZINormal>::Ptr temp(new pcl::PointCloud<pcl::PointXYZINormal>);
+        pcl::io::loadPCDFile(root_dir + "map/pcd/" + to_string(count) + ".pcd", *temp);
+        scManager.makeAndSaveScancontextAndKeys(*temp);
+        pcl::transformPointCloud(*temp, *temp, p, q);
+        *global_map += *temp;
+        sensor_msgs::PointCloud2 msg_global;
+        pcl::toROSMsg(*temp, msg_global);
+        msg_global.header.frame_id = "camera_init";
+        msg_global.header.stamp = ros::Time::now();
+        global_map_pub.publish(msg_global);
+        count++;
+    }
+    pose_file.close();
+
+}
+
 void global_localization()
 {
     while (ros::ok())
@@ -966,36 +994,11 @@ int main(int argc, char** argv)
     bool status = ros::ok();
 
     // load global map
-    ros::Duration(1).sleep();
+    ROS_INFO("Press any key to load map");
     getchar();
-
-    // load pcd
-    int pcd_num = 3048;
-    string path_name = "/home/ywl/Documents/maps/tib_f5/";
-    fstream pose_file;
-    pose_file.open(path_name + "pose.json");
-    for (int i = 0; i < pcd_num; i++)
-    {
-        pcl::PointCloud<pcl::PointXYZINormal>::Ptr temp(new pcl::PointCloud<pcl::PointXYZINormal>);
-        pcl::io::loadPCDFile(path_name + "pcd/" + to_string(i) + ".pcd", *temp);
-        double x, y, z, qw, qx, qy, qz;
-        pose_file >> x >> y >>  z >> qw >> qx >> qy >> qz;
-        Eigen::Vector3d p = {x, y, z};
-        Eigen::Quaterniond q = {qw, qx, qy, qz};
-        position_map.push_back(p);
-        pose_map.push_back(q);
-        scManager.makeAndSaveScancontextAndKeys(*temp);
-        pcl::transformPointCloud(*temp, *temp, p, q);
-        // publish to ROS
-        *global_map += *temp;
-        sensor_msgs::PointCloud2 msg_global;
-        pcl::toROSMsg(*temp, msg_global);
-        msg_global.header.frame_id = "camera_init";
-        msg_global.header.stamp = ros::Time::now();
-        pubGlobalMap.publish(msg_global);
-    }
-    pose_file.close();
-    // build map sc
+    // load pcd and build map sc
+    load_file(pubGlobalMap);
+    // build global ikdtree
     ikdtree_global.set_downsample_param(filter_size_map_min);
     ikdtree_global.Build(global_map->points);
     ROS_INFO("Load map successfully");

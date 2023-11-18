@@ -6,8 +6,15 @@
   <em>Fig 1 :Indoor test without manual input of the initial pose</em>
 </p>
 
+<p align="center">
+  <img src="doc/init.gif" height="250"/>
+<img src="doc/detail.gif" height="250"/>
+  <br>
+  <em>Fig 2 :Initial pose given by ScanContext(left)  and Localization detail(right)</em>
+</p>
+
 ## 0. Features
-FAST-LOCALIZATION is a framework for relocalization in a known map, based on [FAST-LIO2](https://github.com/hku-mars/FAST_LIO). It employs [scancontext](https://github.com/irapkaist/scancontext) for initial global localization. Compared to [FAST_LIO_LOCALIZATION](https://github.com/HViktorTsoi/FAST_LIO_LOCALIZATION), FAST-LOCALIZATION does not require manual input of the initial pose. By utilizing continuous global point cloud constraints, it achieves more stable and globally consistent accurate pose estimates.
+FAST-LOCALIZATION is a framework for relocalization in a known map, based on [FAST-LIO2](https://github.com/hku-mars/FAST_LIO). It employs [ScanContext](https://github.com/irapkaist/scancontext) for initial global localization. Compared to [FAST_LIO_LOCALIZATION](https://github.com/HViktorTsoi/FAST_LIO_LOCALIZATION), FAST-LOCALIZATION does not require manual input of the initial pose. By utilizing continuous global point cloud constraints, it achieves more stable and globally consistent accurate pose estimates.
 ## 1. Prerequisites
 ### 1.1 **Ubuntu** and **ROS**
 **Ubuntu >= 16.04**
@@ -45,8 +52,8 @@ FAST-LOCALIZATION can seamlessly integrate with [HBA](https://github.com/hku-mar
 ```
 .
 ├── pcd
-├── 0.pcd
-└── 1.pcd
+│   ├── 0.pcd
+│   └── 1.pcd
 └── pose.json
 ```
 
@@ -60,4 +67,4 @@ roslaunch fast_localization localization_mid360.launch
 
 ## 6.Acknowledgments
 
-Thanks for [FAST-LIO2](https://github.com/hku-mars/FAST_LIO), [HBA](https://github.com/hku-mars/HBA) and [scancontext](https://github.com/irapkaist/scancontext)
+Thanks for [FAST-LIO2](https://github.com/hku-mars/FAST_LIO), [HBA](https://github.com/hku-mars/HBA) and [ScanContext](https://github.com/irapkaist/scancontext)

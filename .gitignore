@@ -8,3 +8,5 @@ Log/*.pdf
 PCD/*.pcd
 cmake-build-debug
 .idea
+map/pcd/*.pcd
+map/pose.json
