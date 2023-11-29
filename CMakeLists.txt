@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(fast_localization)
 
-SET(CMAKE_BUILD_TYPE "Debug")
+SET(CMAKE_BUILD_TYPE "Release")
 
 ADD_COMPILE_OPTIONS(-std=c++14 )
-set( CMAKE_CXX_FLAGS "-std=c++14 -O0" )
+set( CMAKE_CXX_FLAGS "-std=c++14 -O3" )
 
 add_definitions(-DROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\")
 
