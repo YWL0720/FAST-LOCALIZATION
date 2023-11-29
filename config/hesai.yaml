@@ -6,7 +6,7 @@ common:
                                   # This param will take effect no matter what time_sync_en is. So if the time offset is not known exactly, please set as 0.0
     localization_mode: 1          # 1 for given init pose, 2 for dynamic init
 preprocess:
-    lidar_type: 1                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 
+    lidar_type: 4                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR,
     scan_line: 4
     blind: 0.5
 
@@ -19,9 +19,9 @@ mapping:
     det_range:     100.0
     extrinsic_est_en:  false      # true: enable the online estimation of IMU-LiDAR extrinsic
     extrinsic_T: [ 0, 0, 0]
-    extrinsic_R: [ 1, 0, 0,
-                   0, 1, 0,
-                   0, 0, 1]
+    extrinsic_R: [ 0, 1, 0,
+                   1, 0, 0,
+                   0, 0, -1]
 
 publish:
     path_en:  true
