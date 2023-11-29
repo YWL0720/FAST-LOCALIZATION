@@ -61,6 +61,7 @@
 #include <ikd-Tree/ikd_Tree.h>
 #include <chrono>
 #include <pcl/registration/ndt.h>
+#include <pcl/registration/icp.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include "Scancontext/Scancontext.h"
 
@@ -804,6 +805,7 @@ void load_file(ros::Publisher& global_map_pub)
 
 void global_localization()
 {
+    ros::Rate rate(20);
     while (ros::ok())
     {
         std::unique_lock<std::mutex> lock_state(global_localization_finish_state_mutex);
@@ -832,41 +834,64 @@ void global_localization()
                 lock_init_feats.unlock();
 
                 int current_init_id = init_pair.first;
-                PointCloudXYZI::Ptr current_init_pc = init_pair.second;
+                PointCloudXYZI::Ptr current_init_pc_origin = init_pair.second;
+                PointCloudXYZI::Ptr current_init_pc(new PointCloudXYZI);
+                pcl::copyPointCloud(*current_init_pc_origin, *current_init_pc);
+
                 scManager.makeAndSaveScancontextAndKeys(*current_init_pc);
                 // 获得全局定位ID
                 int localization_id = scManager.detectLoopClosureID().first;
+                float yaw_init = scManager.detectLoopClosureID().second;
+                Eigen::AngleAxisd yaw(-yaw_init, Eigen::Vector3d(0, 0, 1));
+                Eigen::Matrix4d T_init_sc = Eigen::Matrix4d::Identity();
+                T_init_sc.block<3, 3>(0, 0) = Eigen::Matrix3d(yaw);
+                pcl::transformPointCloud(*current_init_pc, *current_init_pc, T_init_sc);
                 ROS_INFO("Global match map id = %d", localization_id);
                 // 加载匹配地图帧 及 状态
                 PointCloudXYZI::Ptr current_loop_pc(new PointCloudXYZI);
                 pcl::io::loadPCDFile(root_dir + "map/pcd/" + to_string(localization_id) + ".pcd", *current_loop_pc);
                 Eigen::Vector3d p = position_map[localization_id];
                 Eigen::Quaterniond q = pose_map[localization_id];
-                // ndt配准 5次迭代
-                pcl::NormalDistributionsTransform<PointType , PointType> ndt;
+
                 Eigen::Matrix4d T_corr = Eigen::Matrix4d::Identity();
-                for (int it = 0; it < 5; it++)
-                {
-                    ndt.setInputSource(current_init_pc);
-                    ndt.setInputTarget(current_loop_pc);
-                    pcl::PointCloud<PointType>::Ptr unused(new pcl::PointCloud<PointType>);
-                    ndt.align(*unused);
-                    T_corr = ndt.getFinalTransformation().cast<double>();
-                    pcl::transformPointCloud(*current_init_pc, *current_init_pc, T_corr);
-                }
+
+
+                pcl::IterativeClosestPoint<PointType, PointType> icp;
+                icp.setMaxCorrespondenceDistance(5);
+
+                icp.setInputSource(current_init_pc);
+                icp.setInputTarget(current_loop_pc);
+                pcl::PointCloud<PointType>::Ptr unused(new pcl::PointCloud<PointType>);
+                icp.align(*unused);
+                Eigen::Matrix4d T_corr_current = icp.getFinalTransformation().cast<double>();
+                pcl::transformPointCloud(*current_init_pc, *current_init_pc, T_corr_current);
+                T_corr = T_corr_current * T_init_sc;
+
+                icp.setMaxCorrespondenceDistance(1);
+
+                icp.setInputSource(current_init_pc);
+                icp.setInputTarget(current_loop_pc);
+                icp.align(*unused);
+                T_corr_current = icp.getFinalTransformation().cast<double>();
+                pcl::transformPointCloud(*current_init_pc, *current_init_pc, T_corr_current);
+                T_corr = (T_corr_current * T_corr).eval();
+
+                cout << T_corr << endl;
+
                 Eigen::Matrix4d T_or = Eigen::Matrix4d::Identity();
                 T_or.block<3, 3>(0, 0) = q.toRotationMatrix();
                 T_or.block<3, 1>(0, 3) = p;
 
-                Eigen::Matrix4d T = T_corr * T_or;
+                Eigen::Matrix4d T = T_or * T_corr;
                 init_poses.push_back(T);
                 init_ids.push_back(current_init_id);
                 scManager.dropBackScancontextAndKeys();
                 init_check++;
             }
         }
+
         Eigen::Vector3d pos_diff = init_poses[0].block<3, 1>(0, 3) - init_poses[1].block<3, 1>(0, 3);
-        if (pos_diff.norm() < 1.0)
+        if (pos_diff.norm() < 0.05)
         {
             lock_state.lock();
             global_localization_finish = true;
@@ -879,6 +904,12 @@ void global_localization()
             swap(init_feats_down_bodys, swap_empty);
             lock_init_feats.unlock();
         }
+        else
+        {
+            init_ids.clear();
+            init_poses.clear();
+        }
+        rate.sleep();
     }
 }
 
@@ -1002,6 +1033,7 @@ int main(int argc, char** argv)
     ikdtree_global.set_downsample_param(filter_size_map_min);
     ikdtree_global.Build(global_map->points);
     ROS_INFO("Load map successfully");
+    // 全局定位线程
     std::thread global_localization_thread(global_localization);
     while (status)
     {
@@ -1033,6 +1065,7 @@ int main(int argc, char** argv)
                 global_state.pos = T_map_current.block<3, 1>(0, 3);
                 global_state.rot = T_map_current.block<3, 3>(0, 0);
                 kf.change_x(global_state);
+                state_point = kf.get_x();
                 ikdtree = std::move(ikdtree_global);
                 global_update = true;
             }
@@ -1140,6 +1173,30 @@ int main(int argc, char** argv)
 
             double t_update_end = omp_get_wtime();
 
+
+
+
+            /******* Publish odometry *******/
+            publish_odometry(pubOdomAftMapped);
+
+            /*** add the feature points to map kdtree ***/
+            t3 = omp_get_wtime();
+            if (!global_localization_finish)
+            {
+                std::unique_lock<std::mutex> lock_init_feats(init_feats_down_body_mutex);
+                map_incremental();
+                lock_init_feats.unlock();
+            }
+            t5 = omp_get_wtime();
+
+            /******* Publish points *******/
+            if (path_en && global_localization_finish)                         publish_path(pubPath);
+            if (scan_pub_en || pcd_save_en)      publish_frame_world(pubLaserCloudFull);
+            if (scan_pub_en && scan_body_pub_en) publish_frame_body(pubLaserCloudFull_body);
+            // publish_effect_world(pubLaserCloudEffect);
+            // publish_map(pubLaserCloudMap);
+
+
             // for init
             if (!global_localization_finish)
             {
@@ -1151,21 +1208,6 @@ int main(int argc, char** argv)
                 init_count++;
             }
 
-
-            /******* Publish odometry *******/
-            publish_odometry(pubOdomAftMapped);
-
-            /*** add the feature points to map kdtree ***/
-            t3 = omp_get_wtime();
-//            map_incremental();
-            t5 = omp_get_wtime();
-            
-            /******* Publish points *******/
-            if (path_en && global_localization_finish)                         publish_path(pubPath);
-            if (scan_pub_en || pcd_save_en)      publish_frame_world(pubLaserCloudFull);
-            if (scan_pub_en && scan_body_pub_en) publish_frame_body(pubLaserCloudFull_body);
-            // publish_effect_world(pubLaserCloudEffect);
-            // publish_map(pubLaserCloudMap);
             static double total_time = 0;
             static int time_count = 1;
             std::chrono::steady_clock::time_point t_end = std::chrono::steady_clock::now();
