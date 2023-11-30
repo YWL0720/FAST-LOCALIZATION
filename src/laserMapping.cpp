@@ -883,7 +883,12 @@ void global_localization()
                 T_or.block<3, 3>(0, 0) = q.toRotationMatrix();
                 T_or.block<3, 1>(0, 3) = p;
 
-                Eigen::Matrix4d T = T_or * T_corr;
+                Eigen::Matrix4d T_i_l = Eigen::Matrix4d::Identity();
+                T_i_l.block<3, 3>(0, 0) = Lidar_R_wrt_IMU;
+                T_i_l.block<3, 1>(0, 3) = Lidar_T_wrt_IMU;
+
+                Eigen::Matrix4d T = T_or * T_corr * T_i_l.inverse();
+
                 init_poses.push_back(T);
                 init_ids.push_back(current_init_id);
                 scManager.dropBackScancontextAndKeys();
