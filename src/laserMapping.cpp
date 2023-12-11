@@ -897,7 +897,7 @@ void global_localization()
         }
 
         Eigen::Vector3d pos_diff = init_poses[0].block<3, 1>(0, 3) - init_poses[1].block<3, 1>(0, 3);
-        if (pos_diff.norm() < 0.05)
+        if (pos_diff.norm() < 0.1)
         {
             lock_state.lock();
             global_localization_finish = true;
