@@ -14,7 +14,7 @@
 </p>
 
 ## 0. Features
-FAST-LOCALIZATION is a framework for relocalization in a known map, based on [FAST-LIO2](https://github.com/hku-mars/FAST_LIO). It employs [ScanContext](https://github.com/irapkaist/scancontext) for initial global localization. Compared to [FAST_LIO_LOCALIZATION](https://github.com/HViktorTsoi/FAST_LIO_LOCALIZATION), FAST-LOCALIZATION does not require manual input of the initial pose. By utilizing continuous global point cloud constraints, it achieves more stable and globally consistent accurate pose estimates.
+FAST-LOCALIZATION is a framework for relocalization in a known map, based on [FAST-LIO2](https://github.com/hku-mars/FAST_LIO). It employs [ScanContext](https://github.com/gisbi-kim/scancontext_tro) for initial global localization. Compared to [FAST_LIO_LOCALIZATION](https://github.com/HViktorTsoi/FAST_LIO_LOCALIZATION), FAST-LOCALIZATION does not require manual input of the initial pose. By utilizing continuous global point cloud constraints, it achieves more stable and globally consistent accurate pose estimates.
 ## 1. Prerequisites
 ### 1.1 **Ubuntu** and **ROS**
 **Ubuntu >= 16.04**
@@ -67,4 +67,4 @@ roslaunch fast_localization localization_mid360.launch
 
 ## 6.Acknowledgments
 
-Thanks for [FAST-LIO2](https://github.com/hku-mars/FAST_LIO), [HBA](https://github.com/hku-mars/HBA) and [ScanContext](https://github.com/irapkaist/scancontext)
+Thanks for [FAST-LIO2](https://github.com/hku-mars/FAST_LIO), [HBA](https://github.com/hku-mars/HBA) and [ScanContext](https://github.com/gisbi-kim/scancontext_tro)
