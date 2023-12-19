@@ -842,6 +842,13 @@ void global_localization()
                 // 获得全局定位ID
                 int localization_id = scManager.detectLoopClosureID().first;
                 float yaw_init = scManager.detectLoopClosureID().second;
+
+                if (localization_id == -1)
+                {
+                    init_check = 0;
+                    continue;
+                }
+
                 Eigen::AngleAxisd yaw(-yaw_init, Eigen::Vector3d(0, 0, 1));
                 Eigen::Matrix4d T_init_sc = Eigen::Matrix4d::Identity();
                 T_init_sc.block<3, 3>(0, 0) = Eigen::Matrix3d(yaw);
@@ -882,7 +889,12 @@ void global_localization()
                 T_or.block<3, 3>(0, 0) = q.toRotationMatrix();
                 T_or.block<3, 1>(0, 3) = p;
 
-                Eigen::Matrix4d T = T_or * T_corr;
+                Eigen::Matrix4d T_i_l = Eigen::Matrix4d::Identity();
+                T_i_l.block<3, 3>(0, 0) = Lidar_R_wrt_IMU;
+                T_i_l.block<3, 1>(0, 3) = Lidar_T_wrt_IMU;
+
+                Eigen::Matrix4d T = T_or * T_corr * T_i_l.inverse();
+
                 init_poses.push_back(T);
                 init_ids.push_back(current_init_id);
                 scManager.dropBackScancontextAndKeys();
@@ -891,7 +903,7 @@ void global_localization()
         }
 
         Eigen::Vector3d pos_diff = init_poses[0].block<3, 1>(0, 3) - init_poses[1].block<3, 1>(0, 3);
-        if (pos_diff.norm() < 0.05)
+        if (pos_diff.norm() < 2)
         {
             lock_state.lock();
             global_localization_finish = true;

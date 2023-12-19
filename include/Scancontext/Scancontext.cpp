@@ -321,7 +321,7 @@ std::pair<int, float> SCManager::detectLoopClosureID ( void )
     /* 
      * loop threshold check
      */
-    if( min_dist < SC_DIST_THRES || min_dist >= SC_DIST_THRES)
+    if( min_dist < SC_DIST_THRES)
     {
         loop_id = nn_idx; 
     
